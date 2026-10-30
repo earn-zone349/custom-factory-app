@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/splash/splash_screen.dart';
 
 /// App entry point with global error capturing.
 Future<void> main() async {
@@ -26,9 +27,7 @@ class CustomFactoryApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const Scaffold(
-        body: Center(child: Text(AppConfig.appName)),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
