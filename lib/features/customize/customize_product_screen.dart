@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../editor/design_editor_screen.dart';
 import 'models/category_config.dart';
 
 /// Lets the customer choose style, color, size and quantity for any product
@@ -59,14 +60,17 @@ class _CustomizeProductScreenState extends State<CustomizeProductScreen> {
     return null;
   }
 
-  /// Placeholder until the design editor is built (next phase).
+  /// Opens the design editor for the chosen product color.
   void _onContinue() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Design editor is coming soon')),
-      );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DesignEditorScreen(
+          categoryName: widget.config.name,
+          baseColor: CategoryConfig.colors[_colorIndex].value,
+        ),
+      ),
+    );
   }
 
   @override
