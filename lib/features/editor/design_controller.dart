@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import 'models/design_element.dart';
+import 'models/design_template.dart';
 
 /// Holds the editor state: elements, selection and undo/redo history.
 class DesignController extends ChangeNotifier {
@@ -133,6 +134,20 @@ class DesignController extends ChangeNotifier {
       ),
     );
     _selectedId = id;
+    notifyListeners();
+    return true;
+  }
+
+  /// Replaces the whole design with a template. Returns false if the
+  /// template produces nothing. The change can be undone.
+  bool applyTemplate(DesignTemplate template, TemplateTheme theme) {
+    final List<DesignElement> built = template.build(theme, _nextId);
+    if (built.isEmpty || built.length > maxElements) return false;
+    _recordHistory();
+    _elements
+      ..clear()
+      ..addAll(built);
+    _selectedId = null;
     notifyListeners();
     return true;
   }

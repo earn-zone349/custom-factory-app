@@ -7,8 +7,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import 'design_controller.dart';
 import 'models/design_element.dart';
+import 'models/design_template.dart';
 import 'widgets/canvas_element_view.dart';
 import 'widgets/properties_panel.dart';
+import 'widgets/template_picker.dart';
 import 'widgets/text_input_dialog.dart';
 
 /// Canva-style editor: add text and shapes, move, resize, rotate, style.
@@ -128,6 +130,45 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
     );
   }
 
+  /// Opens the template picker and applies the chosen template.
+  Future<void> _openTemplates() async {
+    final DesignTemplate? template = await showTemplatePicker(
+      context,
+      baseColor: widget.baseColor,
+    );
+    if (template == null || !mounted) return;
+
+    if (_controller.elements.isNotEmpty) {
+      final bool? replace = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Replace current design?'),
+            content: const Text(
+              'Your current design will be replaced. You can undo this.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Replace'),
+              ),
+            ],
+          );
+        },
+      );
+      if (replace != true || !mounted) return;
+    }
+
+    final TemplateTheme theme = TemplateTheme.forBase(widget.baseColor);
+    if (!_controller.applyTemplate(template, theme)) {
+      _showMessage('Could not apply the template.');
+    }
+  }
+
   /// Placeholder until saving the design is built (next steps).
   void _onDone() {
     _showMessage('Saving the design comes in the next steps');
@@ -181,6 +222,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
                 onAddText: _addText,
                 onAddShape: _addShape,
                 onAddImage: _addImage,
+                onOpenTemplates: _openTemplates,
               ),
             ],
           ),
@@ -282,11 +324,13 @@ class _AddToolbar extends StatelessWidget {
     required this.onAddText,
     required this.onAddShape,
     required this.onAddImage,
+    required this.onOpenTemplates,
   });
 
   final VoidCallback onAddText;
   final VoidCallback onAddShape;
   final VoidCallback onAddImage;
+  final VoidCallback onOpenTemplates;
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +361,13 @@ class _AddToolbar extends StatelessWidget {
                   icon: Icons.image_rounded,
                   label: 'Image',
                   onTap: onAddImage,
+                ),
+              ),
+              Expanded(
+                child: _ToolButton(
+                  icon: Icons.dashboard_customize_rounded,
+                  label: 'Templates',
+                  onTap: onOpenTemplates,
                 ),
               ),
             ],
