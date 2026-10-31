@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/constants/app_spacing.dart';
-import '../shell/main_shell.dart';
+import '../auth/login_screen.dart';
 
 /// Branded splash screen shown briefly on app start.
 class SplashScreen extends StatefulWidget {
@@ -22,11 +22,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(_displayDuration, _openMainShell);
+    _timer = Timer(_displayDuration, _openNextScreen);
   }
 
   /// Replaces the splash with the main app frame (fade transition).
-  void _openMainShell() {
+  void _openNextScreen() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
           Animation<double> animation,
           Animation<double> secondaryAnimation,
         ) =>
-            const MainShell(),
+            const LoginScreen(),
         transitionsBuilder: (
           BuildContext context,
           Animation<double> animation,
