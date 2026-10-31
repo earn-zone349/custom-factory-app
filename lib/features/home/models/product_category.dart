@@ -13,12 +13,27 @@ class ProductCategory {
   final String subtitle;
   final IconData icon;
 
-  /// Initial product lineup. Will later be loaded from the database.
+  /// Initial category lineup. Will later be loaded from the database.
   static const List<ProductCategory> defaults = <ProductCategory>[
     ProductCategory(
       name: 'T-Shirt',
       subtitle: 'Custom prints',
       icon: Icons.checkroom_rounded,
+    ),
+    ProductCategory(
+      name: 'Jersey',
+      subtitle: 'Team & sports',
+      icon: Icons.sports_soccer_rounded,
+    ),
+    ProductCategory(
+      name: 'Hoodie',
+      subtitle: 'Warm & stylish',
+      icon: Icons.dry_cleaning_rounded,
+    ),
+    ProductCategory(
+      name: 'Cap',
+      subtitle: 'Brand your cap',
+      icon: Icons.sports_baseball_rounded,
     ),
     ProductCategory(
       name: 'Mug',
@@ -34,6 +49,16 @@ class ProductCategory {
       name: 'Sandal',
       subtitle: 'Your own style',
       icon: Icons.directions_walk_rounded,
+    ),
+    ProductCategory(
+      name: 'Packaging Box',
+      subtitle: 'Boxes & packs',
+      icon: Icons.inventory_2_rounded,
+    ),
+    ProductCategory(
+      name: 'Other',
+      subtitle: 'Anything you imagine',
+      icon: Icons.auto_awesome_rounded,
     ),
   ];
 }

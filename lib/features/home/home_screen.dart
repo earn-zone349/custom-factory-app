@@ -3,19 +3,23 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/constants/app_spacing.dart';
+import '../customize/customize_product_screen.dart';
+import '../customize/models/category_config.dart';
 import 'models/product_category.dart';
 
 /// Main landing screen: promo banner, product categories, how it works.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  /// Placeholder action until the design editor is built (next phases).
+  /// Opens the customization screen for the tapped category.
   void _onCategoryTap(BuildContext context, ProductCategory category) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('${category.name} designer is coming soon')),
-      );
+    final CategoryConfig? config = CategoryConfig.byName(category.name);
+    if (config == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CustomizeProductScreen(config: config),
+      ),
+    );
   }
 
   @override
