@@ -4,6 +4,12 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../editor/design_editor_screen.dart';
+import '../cart/cart_controller.dart';
+import '../cart/cart_scope.dart';
+import '../cart/cart_screen.dart';
+import '../cart/models/cart_item.dart';
+import '../editor/data/design_document.dart';
+import '../editor/data/design_storage.dart';
 import 'models/category_config.dart';
 
 /// Lets the customer choose style, color, size and quantity for any product
@@ -60,17 +66,101 @@ class _CustomizeProductScreenState extends State<CustomizeProductScreen> {
     return null;
   }
 
-  /// Opens the design editor for the chosen product color.
-  void _onContinue() {
+  /// Opens the design editor. When the customer finishes, the product and
+  /// the saved design are added to the cart.
+  Future<void> _onContinue() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+
+    final CartController cart = CartScope.of(context);
+    final NavigatorState navigator = Navigator.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final CategoryConfig config = widget.config;
+    final ColorOption chosenColor = CategoryConfig.colors[_colorIndex];
+    final String? style = _style;
+    final String? size = _size;
+    final int quantity = _quantity;
+    final String notes = _notesController.text.trim();
+
+    final String? designId = await navigator.push<String>(
+      MaterialPageRoute<String>(
         builder: (_) => DesignEditorScreen(
-          categoryName: widget.config.name,
-          baseColor: CategoryConfig.colors[_colorIndex].value,
+          categoryName: config.name,
+          baseColor: chosenColor.value,
         ),
       ),
     );
+    if (designId == null || !mounted) return;
+
+    // The customer may have changed the product color inside the editor.
+    ColorOption color = chosenColor;
+    try {
+      final DesignDocument document = await DesignStorage().load(designId);
+      color = _colorFor(document.baseColor) ??
+          ColorOption(name: 'Custom', value: document.baseColor);
+    } on Exception catch (error) {
+      debugPrint('Could not read the saved design color: $error');
+    }
+
+    final CartItem item = CartItem(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      category: config.name,
+      style: style,
+      size: size,
+      colorName: color.name,
+      colorValue: color.value.toARGB32(),
+      quantity: quantity,
+      unitPrice: config.startingPrice,
+      notes: notes,
+      designId: designId,
+    );
+
+    try {
+      final bool added = await cart.add(item);
+      if (!added) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Your cart is full. Remove an item first.'),
+            ),
+          );
+        return;
+      }
+    } on Exception {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Could not add to cart. Please try again.'),
+          ),
+        );
+      return;
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Added to cart'),
+          action: SnackBarAction(
+            label: 'View cart',
+            onPressed: () {
+              navigator.push(
+                MaterialPageRoute<void>(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    if (mounted) navigator.pop();
+  }
+
+  /// Finds the palette color with this value, or null for a custom color.
+  static ColorOption? _colorFor(Color value) {
+    for (final ColorOption option in CategoryConfig.colors) {
+      if (option.value == value) return option;
+    }
+    return null;
   }
 
   @override

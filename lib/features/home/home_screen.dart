@@ -5,6 +5,7 @@ import '../../core/constants/app_config.dart';
 import '../../core/constants/app_spacing.dart';
 import '../customize/customize_product_screen.dart';
 import '../customize/models/category_config.dart';
+import '../cart/widgets/cart_button.dart';
 import 'models/product_category.dart';
 
 /// Main landing screen: promo banner, product categories, how it works.
@@ -35,6 +36,7 @@ class HomeScreen extends StatelessWidget {
             color: AppColors.primaryDark,
           ),
         ),
+        actions: const <Widget>[CartButton()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
