@@ -76,6 +76,7 @@ class _CanvasElementViewState extends State<CanvasElementView> {
           child: Text(
             t.text,
             textAlign: TextAlign.center,
+            textScaler: TextScaler.noScaling,
             style: EditorTextStyle.resolve(t),
           ),
         ),

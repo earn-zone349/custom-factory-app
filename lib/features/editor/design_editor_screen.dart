@@ -1,14 +1,21 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
+import 'data/design_document.dart';
+import 'data/design_exporter.dart';
+import 'data/design_storage.dart';
 import 'design_controller.dart';
 import 'models/design_element.dart';
 import 'models/design_template.dart';
 import 'widgets/canvas_element_view.dart';
+import 'widgets/editor_menu_button.dart';
 import 'widgets/properties_panel.dart';
 import 'widgets/template_picker.dart';
 import 'widgets/text_input_dialog.dart';
@@ -19,12 +26,20 @@ class DesignEditorScreen extends StatefulWidget {
     super.key,
     required this.categoryName,
     required this.baseColor,
+    this.initialElements = const <DesignElement>[],
+    this.designId,
   });
 
   final String categoryName;
 
   /// Color of the product the customer is designing on.
   final Color baseColor;
+
+  /// Elements to start with when reopening a saved design.
+  final List<DesignElement> initialElements;
+
+  /// Id of the saved design being edited (null for a new design).
+  final String? designId;
 
   @override
   State<DesignEditorScreen> createState() => _DesignEditorScreenState();
@@ -33,6 +48,10 @@ class DesignEditorScreen extends StatefulWidget {
 class _DesignEditorScreenState extends State<DesignEditorScreen> {
   late final DesignController _controller;
   final ImagePicker _picker = ImagePicker();
+  final DesignStorage _storage = DesignStorage();
+  bool _isBusy = false;
+  String? _designId;
+  List<DesignElement> _savedElements = const <DesignElement>[];
 
   @override
   void initState() {
@@ -43,6 +62,9 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
     _controller = DesignController(
       defaultTextColor: isDark ? Colors.white : Colors.black,
     );
+    _controller.loadElements(widget.initialElements);
+    _designId = widget.designId;
+    _savedElements = _controller.elements;
   }
 
   @override
@@ -169,14 +191,143 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
     }
   }
 
-  /// Placeholder until saving the design is built (next steps).
-  void _onDone() {
-    _showMessage('Saving the design comes in the next steps');
+  /// True when the canvas differs from the last saved version.
+  bool get _hasUnsavedChanges {
+    if (_controller.elements.isEmpty && _designId == null) return false;
+    return !_controller.matches(_savedElements);
+  }
+
+  /// Back button: asks what to do with unsaved changes.
+  Future<void> _handleBack() async {
+    if (!_hasUnsavedChanges) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final _LeaveChoice? choice = await showDialog<_LeaveChoice>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Save your design?'),
+          content: const Text('You have unsaved changes.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(_LeaveChoice.discard),
+              child: const Text('Discard'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(_LeaveChoice.save),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (choice == null || !mounted) return;
+    if (choice == _LeaveChoice.discard) {
+      Navigator.of(context).pop();
+      return;
+    }
+    await _finishAndClose();
+  }
+
+  /// Saves the design and closes the editor.
+  Future<void> _finishAndClose() async {
+    final bool saved = await _saveDesign(showConfirmation: false);
+    if (!saved || !mounted) return;
+    _showMessage('Design saved. Find it in the Design tab.');
+    Navigator.of(context).pop(_designId);
+  }
+
+  /// Done button: saves the design and closes the editor.
+  Future<void> _onDone() => _finishAndClose();
+
+  /// Snapshot of the current design for saving.
+  DesignDocument _snapshot() {
+    return DesignDocument(
+      category: widget.categoryName,
+      baseColorValue: widget.baseColor.toARGB32(),
+      elements: _controller.elements,
+    );
+  }
+
+  void _onMenuAction(EditorMenuAction action) {
+    switch (action) {
+      case EditorMenuAction.save:
+        _saveDesign();
+      case EditorMenuAction.export:
+        _exportPrintFile();
+    }
+  }
+
+  /// Saves the design on this device. Returns true on success.
+  Future<bool> _saveDesign({bool showConfirmation = true}) async {
+    if (_isBusy) return false;
+    if (_controller.elements.isEmpty) {
+      _showMessage('Add something to your design first.');
+      return false;
+    }
+    setState(() => _isBusy = true);
+    try {
+      final String id = await _storage.save(_snapshot(), id: _designId);
+      _designId = id;
+      _savedElements = _controller.elements;
+      if (mounted && showConfirmation) {
+        _showMessage('Design saved on this device.');
+      }
+      return true;
+    } on Exception {
+      if (mounted) {
+        _showMessage('Could not save the design. Please try again.');
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  /// Renders the print-ready PNG and opens the share sheet.
+  Future<void> _exportPrintFile() async {
+    if (_isBusy) return;
+    final List<DesignElement> elements = _controller.elements;
+    if (elements.isEmpty) {
+      _showMessage('Add something to your design first.');
+      return;
+    }
+    setState(() => _isBusy = true);
+    try {
+      final List<int> png = await DesignExporter.renderPng(elements);
+      final Directory directory = await getTemporaryDirectory();
+      final File file = File(
+        '${directory.path}/print_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(png, flush: true);
+      if (!mounted) return;
+      await Share.shareXFiles(
+        <XFile>[XFile(file.path, mimeType: 'image/png')],
+        subject: 'Print file - ${widget.categoryName}',
+      );
+    } on Exception {
+      if (!mounted) return;
+      _showMessage('Could not create the print file. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) _handleBack();
+      },
+      child: ListenableBuilder(
       listenable: _controller,
       builder: (BuildContext context, Widget? child) {
         final DesignElement? selected = _controller.selected;
@@ -195,6 +346,10 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
                 onPressed: _controller.canRedo ? _controller.redo : null,
                 icon: const Icon(Icons.redo_rounded),
               ),
+              EditorMenuButton(
+                enabled: !_isBusy,
+                onSelected: _onMenuAction,
+              ),
               IconButton(
                 tooltip: 'Done',
                 onPressed: _onDone,
@@ -204,6 +359,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
           ),
           body: Column(
             children: <Widget>[
+              if (_isBusy) const LinearProgressIndicator(),
               Expanded(
                 child: _CanvasArea(
                   controller: _controller,
@@ -228,6 +384,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
           ),
         );
       },
+      ),
     );
   }
 }
@@ -408,3 +565,6 @@ class _ToolButton extends StatelessWidget {
     );
   }
 }
+
+/// What to do with unsaved changes when leaving the editor.
+enum _LeaveChoice { save, discard }

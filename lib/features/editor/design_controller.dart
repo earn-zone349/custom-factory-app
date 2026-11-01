@@ -49,7 +49,14 @@ class DesignController extends ChangeNotifier {
     return _elements.indexWhere((DesignElement e) => e.id == id);
   }
 
-  String _nextId() => 'element_${_idCounter++}';
+  /// Returns an id that is unique even when loaded elements use some ids.
+  String _nextId() {
+    String id;
+    do {
+      id = 'element_${_idCounter++}';
+    } while (_find(id) != null);
+    return id;
+  }
 
   void _pushUndo(List<DesignElement> snapshot) {
     _undoStack.add(snapshot);
@@ -150,6 +157,20 @@ class DesignController extends ChangeNotifier {
     _selectedId = null;
     notifyListeners();
     return true;
+  }
+
+  /// True when the current elements are exactly [other] (same objects).
+  bool matches(List<DesignElement> other) => _sameElements(_elements, other);
+
+  /// Loads elements without recording history (reopening a saved design).
+  void loadElements(List<DesignElement> elements) {
+    _elements
+      ..clear()
+      ..addAll(elements);
+    _undoStack.clear();
+    _redoStack.clear();
+    _selectedId = null;
+    notifyListeners();
   }
 
   void select(String? id) {

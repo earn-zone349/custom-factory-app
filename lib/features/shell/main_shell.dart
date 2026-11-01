@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets/placeholder_screen.dart';
+import '../designs/my_designs_screen.dart';
 import '../home/home_screen.dart';
 
 /// App frame holding the bottom navigation bar and the main tabs.
@@ -12,19 +13,28 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  static const int _designTabIndex = 1;
 
-  static const List<Widget> _pages = <Widget>[
-    HomeScreen(),
-    PlaceholderScreen(title: 'Design', icon: Icons.brush_rounded),
-    PlaceholderScreen(title: 'Orders', icon: Icons.receipt_long_rounded),
-    PlaceholderScreen(title: 'Profile', icon: Icons.person_rounded),
-  ];
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: <Widget>[
+          const HomeScreen(),
+          MyDesignsScreen(isActive: _currentIndex == _designTabIndex),
+          const PlaceholderScreen(
+            title: 'Orders',
+            icon: Icons.receipt_long_rounded,
+          ),
+          const PlaceholderScreen(
+            title: 'Profile',
+            icon: Icons.person_rounded,
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (int index) {

@@ -214,6 +214,7 @@ class _ElementContent extends StatelessWidget {
           child: Text(
             t.text,
             textAlign: TextAlign.center,
+            textScaler: TextScaler.noScaling,
             style: EditorTextStyle.resolve(t),
           ),
         ),
