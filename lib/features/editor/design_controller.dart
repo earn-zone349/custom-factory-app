@@ -14,7 +14,7 @@ class DesignController extends ChangeNotifier {
   static const int _maxHistory = 50;
 
   /// Color given to newly added text (chosen for contrast with the product).
-  final Color defaultTextColor;
+  Color defaultTextColor;
 
   final List<DesignElement> _elements = <DesignElement>[];
   final List<List<DesignElement>> _undoStack = <List<DesignElement>>[];
@@ -171,6 +171,25 @@ class DesignController extends ChangeNotifier {
     _redoStack.clear();
     _selectedId = null;
     notifyListeners();
+  }
+
+  /// Minimum luminance gap for an element to stay clearly visible.
+  static const double _minContrastGap = 0.15;
+
+  /// True if any text or shape would be hard to see on [base].
+  bool hasLowContrastWith(Color base) {
+    final double baseLuminance = base.computeLuminance();
+    for (final DesignElement element in _elements) {
+      final Color? color = switch (element) {
+        TextElement t => t.color,
+        ShapeElement s => s.color,
+        ImageElement _ => null,
+      };
+      if (color == null) continue;
+      final double gap = (color.computeLuminance() - baseLuminance).abs();
+      if (gap < _minContrastGap) return true;
+    }
+    return false;
   }
 
   void select(String? id) {

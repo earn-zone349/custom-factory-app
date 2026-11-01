@@ -16,6 +16,7 @@ import 'models/design_element.dart';
 import 'models/design_template.dart';
 import 'widgets/canvas_element_view.dart';
 import 'widgets/editor_menu_button.dart';
+import 'widgets/product_color_sheet.dart';
 import 'widgets/properties_panel.dart';
 import 'widgets/template_picker.dart';
 import 'widgets/text_input_dialog.dart';
@@ -51,16 +52,17 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
   final DesignStorage _storage = DesignStorage();
   bool _isBusy = false;
   String? _designId;
+  late Color _baseColor;
+  late Color _savedBaseColor;
   List<DesignElement> _savedElements = const <DesignElement>[];
 
   @override
   void initState() {
     super.initState();
-    final bool isDark =
-        ThemeData.estimateBrightnessForColor(widget.baseColor) ==
-            Brightness.dark;
+    _baseColor = widget.baseColor;
+    _savedBaseColor = widget.baseColor;
     _controller = DesignController(
-      defaultTextColor: isDark ? Colors.white : Colors.black,
+      defaultTextColor: _contrastTextColor(_baseColor),
     );
     _controller.loadElements(widget.initialElements);
     _designId = widget.designId;
@@ -71,6 +73,38 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Text color that stays readable on the given product color.
+  static Color _contrastTextColor(Color base) {
+    final bool isDark =
+        ThemeData.estimateBrightnessForColor(base) == Brightness.dark;
+    return isDark ? Colors.white : Colors.black;
+  }
+
+  /// Changes the product color. The canvas updates immediately.
+  void _setProductColor(Color color) {
+    if (color == _baseColor) return;
+    setState(() => _baseColor = color);
+    _controller.defaultTextColor = _contrastTextColor(color);
+    if (_controller.hasLowContrastWith(color)) {
+      _showMessage('Some text or shapes may be hard to see on this color.');
+    }
+  }
+
+  /// Opens the product color picker (24 colors, live preview).
+  Future<void> _openProductColors() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return ProductColorSheet(
+          selected: _baseColor,
+          onSelected: _setProductColor,
+        );
+      },
+    );
   }
 
   void _showMessage(String message) {
@@ -156,7 +190,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
   Future<void> _openTemplates() async {
     final DesignTemplate? template = await showTemplatePicker(
       context,
-      baseColor: widget.baseColor,
+      baseColor: _baseColor,
     );
     if (template == null || !mounted) return;
 
@@ -185,7 +219,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
       if (replace != true || !mounted) return;
     }
 
-    final TemplateTheme theme = TemplateTheme.forBase(widget.baseColor);
+    final TemplateTheme theme = TemplateTheme.forBase(_baseColor);
     if (!_controller.applyTemplate(template, theme)) {
       _showMessage('Could not apply the template.');
     }
@@ -194,7 +228,8 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
   /// True when the canvas differs from the last saved version.
   bool get _hasUnsavedChanges {
     if (_controller.elements.isEmpty && _designId == null) return false;
-    return !_controller.matches(_savedElements);
+    return _baseColor != _savedBaseColor ||
+        !_controller.matches(_savedElements);
   }
 
   /// Back button: asks what to do with unsaved changes.
@@ -251,7 +286,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
   DesignDocument _snapshot() {
     return DesignDocument(
       category: widget.categoryName,
-      baseColorValue: widget.baseColor.toARGB32(),
+      baseColorValue: _baseColor.toARGB32(),
       elements: _controller.elements,
     );
   }
@@ -277,6 +312,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
       final String id = await _storage.save(_snapshot(), id: _designId);
       _designId = id;
       _savedElements = _controller.elements;
+      _savedBaseColor = _baseColor;
       if (mounted && showConfirmation) {
         _showMessage('Design saved on this device.');
       }
@@ -363,7 +399,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
               Expanded(
                 child: _CanvasArea(
                   controller: _controller,
-                  baseColor: widget.baseColor,
+                  baseColor: _baseColor,
                 ),
               ),
               if (selected != null)
@@ -379,6 +415,7 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
                 onAddShape: _addShape,
                 onAddImage: _addImage,
                 onOpenTemplates: _openTemplates,
+                onOpenProductColor: _openProductColors,
               ),
             ],
           ),
@@ -482,12 +519,14 @@ class _AddToolbar extends StatelessWidget {
     required this.onAddShape,
     required this.onAddImage,
     required this.onOpenTemplates,
+    required this.onOpenProductColor,
   });
 
   final VoidCallback onAddText;
   final VoidCallback onAddShape;
   final VoidCallback onAddImage;
   final VoidCallback onOpenTemplates;
+  final VoidCallback onOpenProductColor;
 
   @override
   Widget build(BuildContext context) {
@@ -525,6 +564,13 @@ class _AddToolbar extends StatelessWidget {
                   icon: Icons.dashboard_customize_rounded,
                   label: 'Templates',
                   onTap: onOpenTemplates,
+                ),
+              ),
+              Expanded(
+                child: _ToolButton(
+                  icon: Icons.palette_rounded,
+                  label: 'Product',
+                  onTap: onOpenProductColor,
                 ),
               ),
             ],
