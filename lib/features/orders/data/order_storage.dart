@@ -38,6 +38,25 @@ class OrderStorage {
     return orders;
   }
 
+  /// Changes the status of one order. Returns false if no order has [id].
+  /// Throws [FormatException] if the file is unreadable; the file is then
+  /// left untouched. Entries this version cannot read are kept as they are.
+  Future<bool> updateStatus(String id, OrderStatus status) async {
+    final File file = await _fileProvider();
+    final List<Object?> raw = await _readRaw(file);
+    bool found = false;
+    final List<Object?> next = raw.map<Object?>((Object? entry) {
+      if (entry is Map<String, dynamic> && entry['id'] == id) {
+        found = true;
+        return <String, Object?>{...entry, 'status': status.name};
+      }
+      return entry;
+    }).toList();
+    if (!found) return false;
+    await JsonFile.writeAtomic(file, next);
+    return true;
+  }
+
   /// Adds an order at the front. A corrupt file is copied to
   /// "orders.json.corrupt" first, so no earlier order is ever lost.
   Future<void> add(Order order) async {

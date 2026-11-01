@@ -59,6 +59,33 @@ class OrderService {
     return order;
   }
 
+  /// True while an order can still be cancelled (before it is confirmed).
+  static bool canCancel(Order order) => order.status == OrderStatus.placed;
+
+  /// All saved orders, newest first.
+  Future<List<Order>> listOrders() => _orders.read();
+
+  /// One order by id, or null if it does not exist.
+  Future<Order?> findOrder(String id) async {
+    final List<Order> orders = await _orders.read();
+    for (final Order order in orders) {
+      if (order.id == id) return order;
+    }
+    return null;
+  }
+
+  /// Cancels an order that has not been confirmed yet.
+  /// Throws [StateError] if the order is missing or can no longer be cancelled.
+  Future<void> cancelOrder(String id) async {
+    final Order? order = await findOrder(id);
+    if (order == null) throw StateError('Order $id was not found');
+    if (!canCancel(order)) {
+      throw StateError('Only a newly placed order can be cancelled');
+    }
+    final bool changed = await _orders.updateStatus(id, OrderStatus.cancelled);
+    if (!changed) throw StateError('Order $id was not found');
+  }
+
   static String _generateId(DateTime now) {
     final String code = now.millisecondsSinceEpoch.toRadixString(36);
     return 'CF-${code.toUpperCase()}';
