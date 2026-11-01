@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../checkout/checkout_screen.dart';
 import '../editor/data/design_document.dart';
 import '../editor/data/design_storage.dart';
 import '../editor/widgets/design_preview.dart';
@@ -359,13 +360,11 @@ class _CheckoutBar extends StatelessWidget {
 
   final CartController cart;
 
-  /// Placeholder until checkout is built (next step).
+  /// Opens checkout for everything in the cart.
   void _checkout(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Checkout comes in the next step')),
-      );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CheckoutScreen()),
+    );
   }
 
   @override
