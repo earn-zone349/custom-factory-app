@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'features/cart/cart_scope.dart';
+import 'features/catalog/catalog_scope.dart';
 import 'features/splash/splash_screen.dart';
 
 /// App entry point with global error capturing.
@@ -29,7 +30,9 @@ class CustomFactoryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       builder: (BuildContext context, Widget? child) {
-        return CartScope(child: child ?? const SizedBox.shrink());
+        return CatalogScope(
+          child: CartScope(child: child ?? const SizedBox.shrink()),
+        );
       },
       home: const SplashScreen(),
     );

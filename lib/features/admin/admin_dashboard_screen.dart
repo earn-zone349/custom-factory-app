@@ -5,6 +5,7 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../orders/data/order_service.dart';
 import '../orders/models/order.dart';
+import 'admin_catalog_screen.dart';
 import 'admin_orders_screen.dart';
 import 'models/order_stats.dart';
 
@@ -52,6 +53,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
     if (!mounted) return;
     await _load();
+  }
+
+  void _openCatalog() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const AdminCatalogScreen()),
+    );
   }
 
   @override
@@ -174,10 +181,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             subtitle: 'View, search and update orders',
             onTap: _openOrders,
           ),
-          const _NavTile(
+          _NavTile(
             icon: Icons.sell_outlined,
             title: 'Products and prices',
-            subtitle: 'Coming in the next step',
+            subtitle: 'Edit prices, styles and sizes',
+            onTap: _openCatalog,
           ),
           const _NavTile(
             icon: Icons.factory_outlined,

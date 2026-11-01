@@ -6,15 +6,19 @@ import '../../core/constants/app_spacing.dart';
 import '../customize/customize_product_screen.dart';
 import '../customize/models/category_config.dart';
 import '../cart/widgets/cart_button.dart';
+import '../catalog/catalog_scope.dart';
 import 'models/product_category.dart';
 
 /// Main landing screen: promo banner, product categories, how it works.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  /// Opens the customization screen for the tapped category.
+  /// Opens the customization screen for the tapped category, using the
+  /// admin-managed catalog (prices, styles, sizes) when it is available.
   void _onCategoryTap(BuildContext context, ProductCategory category) {
-    final CategoryConfig? config = CategoryConfig.byName(category.name);
+    final CategoryConfig? config =
+        CatalogScope.maybeOf(context)?.configFor(category.name) ??
+            CategoryConfig.byName(category.name);
     if (config == null) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -26,6 +30,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final List<ProductCategory> categories =
+        CatalogScope.maybeOf(context)?.activeCategories ??
+            ProductCategory.defaults;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,7 +62,7 @@ class HomeScreen extends StatelessWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: ProductCategory.defaults.length,
+              itemCount: categories.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: AppSpacing.md,
@@ -63,7 +70,7 @@ class HomeScreen extends StatelessWidget {
                 childAspectRatio: 1.1,
               ),
               itemBuilder: (BuildContext context, int index) {
-                final ProductCategory category = ProductCategory.defaults[index];
+                final ProductCategory category = categories[index];
                 return _CategoryCard(
                   category: category,
                   onTap: () => _onCategoryTap(context, category),
