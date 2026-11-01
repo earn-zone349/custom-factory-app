@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../cart/models/cart_item.dart';
 import '../models/delivery_address.dart';
 import '../models/order.dart';
+import '../models/order_workflow.dart';
 import '../models/payment_method.dart';
 import 'address_storage.dart';
 import 'order_storage.dart';
@@ -84,6 +85,23 @@ class OrderService {
     }
     final bool changed = await _orders.updateStatus(id, OrderStatus.cancelled);
     if (!changed) throw StateError('Order $id was not found');
+  }
+
+  /// Moves an order to its next status (used by the admin panel).
+  /// Throws StateError if the order is missing or the move is not allowed.
+  Future<Order> changeStatus(String id, OrderStatus next) async {
+    final Order? order = await findOrder(id);
+    if (order == null) throw StateError('Order $id was not found');
+    if (!OrderWorkflow.canMove(order.status, next)) {
+      throw StateError(
+        'Cannot move an order from ${order.status.name} to ${next.name}',
+      );
+    }
+    final bool changed = await _orders.updateStatus(id, next);
+    if (!changed) throw StateError('Order $id was not found');
+    final Order? updated = await findOrder(id);
+    if (updated == null) throw StateError('Order $id was not found');
+    return updated;
   }
 
   static String _generateId(DateTime now) {

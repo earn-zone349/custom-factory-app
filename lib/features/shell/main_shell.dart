@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/widgets/placeholder_screen.dart';
 import '../designs/my_designs_screen.dart';
 import '../home/home_screen.dart';
+import '../profile/profile_screen.dart';
 import '../orders/orders_screen.dart';
 
 /// App frame holding the bottom navigation bar and the main tabs.
@@ -28,10 +28,7 @@ class _MainShellState extends State<MainShell> {
           const HomeScreen(),
           MyDesignsScreen(isActive: _currentIndex == _designTabIndex),
           OrdersScreen(isActive: _currentIndex == _ordersTabIndex),
-          const PlaceholderScreen(
-            title: 'Profile',
-            icon: Icons.person_rounded,
-          ),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
