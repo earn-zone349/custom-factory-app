@@ -6,6 +6,9 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/utils/date_formatters.dart';
 import '../../core/utils/formatters.dart';
 import '../cart/models/cart_item.dart';
+import '../manufacturers/manufacturer_controller.dart';
+import '../manufacturers/manufacturer_scope.dart';
+import '../manufacturers/models/manufacturer.dart';
 import '../orders/data/order_service.dart';
 import '../orders/models/order.dart';
 import '../orders/models/order_display.dart';
@@ -13,6 +16,7 @@ import '../orders/models/order_workflow.dart';
 import '../orders/widgets/order_status_chip.dart';
 import '../orders/widgets/order_status_timeline.dart';
 import '../orders/widgets/saved_design_thumbnail.dart';
+import 'widgets/factory_picker_sheet.dart';
 
 /// One order as the admin sees it: customer, items and status controls.
 class AdminOrderDetailScreen extends StatefulWidget {
@@ -103,12 +107,112 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen> {
     }
   }
 
+  /// Lets the admin pick (or remove) the factory for this order.
+  Future<void> _chooseFactory() async {
+    if (_isUpdating) return;
+    final ManufacturerController factories = ManufacturerScope.of(context);
+    final Order current = _order;
+    final Set<String> orderCategories =
+        current.items.map((CartItem item) => item.category).toSet();
+
+    final FactoryChoice? choice = await showFactoryPicker(
+      context,
+      factories: factories.activeEntries,
+      requiredCategories: orderCategories,
+      selectedId: current.manufacturerId,
+      canRemove: current.manufacturerId != null,
+    );
+    if (choice == null || !mounted) return;
+
+    final Manufacturer? selected = choice.manufacturer;
+    setState(() => _isUpdating = true);
+    try {
+      final Order updated =
+          await widget.service.assignManufacturer(current.id, selected);
+      if (!mounted) return;
+      setState(() => _order = updated);
+      _showMessage(
+        selected == null ? 'Factory removed' : 'Assigned to ${selected.name}',
+      );
+    } on StateError catch (error) {
+      if (!mounted) return;
+      _showMessage(error.message);
+    } on Exception {
+      if (!mounted) return;
+      _showMessage('Could not update the order. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  /// The Factory card: who produces this order and how to reach them.
+  Widget _buildFactorySection(Order order) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final String? name = order.manufacturerName;
+    final String? factoryId = order.manufacturerId;
+    final Manufacturer? partner = factoryId == null
+        ? null
+        : ManufacturerScope.maybeOf(context)?.byId(factoryId);
+    final bool canChange = OrderService.canAssignFactory(order);
+    final bool mustAssign =
+        name == null && order.status == OrderStatus.confirmed;
+
+    return _SectionCard(
+      title: 'Factory',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            name ?? 'Not assigned yet',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          if (partner != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            _InfoRow(label: 'Contact', value: partner.contactPerson),
+            _InfoRow(
+              label: 'Phone',
+              value: partner.phone,
+              onCopy: () => _copy(partner.phone, 'Phone number copied'),
+            ),
+            _InfoRow(label: 'Location', value: partner.district),
+          ],
+          if (mustAssign) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Assign a factory before starting production.',
+              style: textTheme.bodySmall?.copyWith(color: AppColors.error),
+            ),
+          ],
+          if (canChange) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: _isUpdating ? null : _chooseFactory,
+              icon: const Icon(Icons.factory_outlined),
+              label: Text(name == null ? 'Assign factory' : 'Change factory'),
+            ),
+          ] else if (name != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'The factory cannot be changed after production starts.',
+              style: textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildAction(Order order, List<OrderStatus> options, OrderStatus next) {
     final bool isCancel = next == OrderStatus.cancelled;
     final bool isPrimary = !isCancel && next == options.first;
     final String label = OrderWorkflow.actionLabel(order.status, next);
+    final bool needsFactory =
+        next == OrderStatus.inProduction && order.manufacturerId == null;
     final VoidCallback? onPressed =
-        _isUpdating ? null : () => _changeStatus(next);
+        (_isUpdating || needsFactory) ? null : () => _changeStatus(next);
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -199,6 +303,8 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: AppSpacing.md),
+                _buildFactorySection(order),
                 const SizedBox(height: AppSpacing.md),
                 _SectionCard(
                   title: 'Customer',

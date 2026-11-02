@@ -225,6 +225,15 @@ class _AdminOrderCard extends StatelessWidget {
                   color: AppColors.textMuted,
                 ),
               ),
+              if (order.manufacturerName != null) ...<Widget>[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Factory: ${order.manufacturerName}',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[

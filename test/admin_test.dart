@@ -148,6 +148,7 @@ void main() {
 
     test('moves an order through the whole flow', () async {
       await storage.add(_order('CF-1'));
+      await storage.assignManufacturer('CF-1', 'factory_1', 'Test Factory');
 
       for (final OrderStatus step in const <OrderStatus>[
         OrderStatus.confirmed,

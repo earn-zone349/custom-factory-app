@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../cart/models/cart_item.dart';
+import '../../manufacturers/models/manufacturer.dart';
 import '../models/delivery_address.dart';
 import '../models/order.dart';
 import '../models/order_workflow.dart';
@@ -97,7 +98,48 @@ class OrderService {
         'Cannot move an order from ${order.status.name} to ${next.name}',
       );
     }
+    if (next == OrderStatus.inProduction && order.manufacturerId == null) {
+      throw StateError('Assign a factory before starting production');
+    }
     final bool changed = await _orders.updateStatus(id, next);
+    if (!changed) throw StateError('Order $id was not found');
+    final Order? updated = await findOrder(id);
+    if (updated == null) throw StateError('Order $id was not found');
+    return updated;
+  }
+
+  /// True while the factory can still be assigned or changed
+  /// (before production starts).
+  static bool canAssignFactory(Order order) {
+    return order.status == OrderStatus.placed ||
+        order.status == OrderStatus.confirmed;
+  }
+
+  /// Assigns a factory to an order, or removes it when [manufacturer] is
+  /// null. Throws StateError if the order is missing, production has
+  /// started, the factory is inactive or it does not make every product.
+  Future<Order> assignManufacturer(String id, Manufacturer? manufacturer) async {
+    final Order? order = await findOrder(id);
+    if (order == null) throw StateError('Order $id was not found');
+    if (!canAssignFactory(order)) {
+      throw StateError('The factory can no longer be changed for this order');
+    }
+    if (manufacturer != null) {
+      if (!manufacturer.isActive) {
+        throw StateError('This factory is not active');
+      }
+      final Set<String> needed =
+          order.items.map((CartItem item) => item.category).toSet();
+      final List<String> missing = manufacturer.missingFor(needed);
+      if (missing.isNotEmpty) {
+        throw StateError('This factory does not make: ${missing.join(', ')}');
+      }
+    }
+    final bool changed = await _orders.assignManufacturer(
+      id,
+      manufacturer?.id,
+      manufacturer?.name,
+    );
     if (!changed) throw StateError('Order $id was not found');
     final Order? updated = await findOrder(id);
     if (updated == null) throw StateError('Order $id was not found');

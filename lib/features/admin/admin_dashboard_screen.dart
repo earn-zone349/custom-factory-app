@@ -6,6 +6,7 @@ import '../../core/utils/formatters.dart';
 import '../orders/data/order_service.dart';
 import '../orders/models/order.dart';
 import 'admin_catalog_screen.dart';
+import 'admin_factories_screen.dart';
 import 'admin_orders_screen.dart';
 import 'models/order_stats.dart';
 
@@ -53,6 +54,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
     if (!mounted) return;
     await _load();
+  }
+
+  void _openFactories() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const AdminFactoriesScreen()),
+    );
   }
 
   void _openCatalog() {
@@ -187,10 +194,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             subtitle: 'Edit prices, styles and sizes',
             onTap: _openCatalog,
           ),
-          const _NavTile(
+          _NavTile(
             icon: Icons.factory_outlined,
             title: 'Factories',
-            subtitle: 'Coming soon',
+            subtitle: 'Manage factories and assign orders',
+            onTap: _openFactories,
           ),
           const _NavTile(
             icon: Icons.bar_chart_rounded,

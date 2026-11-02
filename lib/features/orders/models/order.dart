@@ -29,6 +29,8 @@ class Order {
     required this.address,
     required this.paymentMethod,
     this.status = OrderStatus.placed,
+    this.manufacturerId,
+    this.manufacturerName,
   });
 
   /// Parses an order. Throws [FormatException] for invalid data.
@@ -53,6 +55,8 @@ class Order {
       address: DeliveryAddress.fromMap(rawAddress),
       paymentMethod: _readEnum(PaymentMethod.values, map, 'paymentMethod'),
       status: _readEnum(OrderStatus.values, map, 'status'),
+      manufacturerId: _readOptionalString(map, 'manufacturerId'),
+      manufacturerName: _readOptionalString(map, 'manufacturerName'),
     );
   }
 
@@ -62,6 +66,12 @@ class Order {
   final DeliveryAddress address;
   final PaymentMethod paymentMethod;
   final OrderStatus status;
+
+  /// Id of the factory producing this order, if one is assigned.
+  final String? manufacturerId;
+
+  /// Name of that factory when it was assigned (kept even if renamed).
+  final String? manufacturerName;
 
   int get totalPieces {
     return items.fold<int>(0, (int sum, CartItem item) => sum + item.quantity);
@@ -86,6 +96,8 @@ class Order {
       'address': address.toMap(),
       'paymentMethod': paymentMethod.name,
       'status': status.name,
+      'manufacturerId': manufacturerId,
+      'manufacturerName': manufacturerName,
     };
   }
 
@@ -93,6 +105,13 @@ class Order {
     final Object? value = map[key];
     if (value is String) return value;
     throw FormatException('Invalid or missing "$key"');
+  }
+
+  static String? _readOptionalString(Map<String, dynamic> map, String key) {
+    final Object? value = map[key];
+    if (value == null) return null;
+    if (value is String) return value;
+    throw FormatException('Invalid "$key"');
   }
 
   static T _readEnum<T extends Enum>(
