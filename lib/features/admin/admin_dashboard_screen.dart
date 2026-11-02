@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../notes/data/note_service.dart';
+import '../notes/models/order_note.dart';
 import '../orders/data/order_service.dart';
 import '../orders/models/order.dart';
 import 'admin_catalog_screen.dart';
 import 'admin_factories_screen.dart';
+import 'admin_issues_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_reports_screen.dart';
 import 'models/order_stats.dart';
@@ -24,7 +27,9 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final OrderService _service = widget.service ?? OrderService();
 
+  final NoteService _noteService = NoteService();
   OrderStats? _stats;
+  int _openIssueCount = 0;
   bool _hasError = false;
 
   @override
@@ -36,14 +41,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _load() async {
     try {
       final List<Order> orders = await _service.listOrders();
+      final int issues = await _countOpenIssues(orders);
       if (!mounted) return;
       setState(() {
         _stats = OrderStats.from(orders);
+        _openIssueCount = issues;
         _hasError = false;
       });
     } on Exception {
       if (!mounted) return;
       setState(() => _hasError = true);
+    }
+  }
+
+  /// Open issues are extra information: if they cannot be read, the
+  /// dashboard still shows the orders.
+  Future<int> _countOpenIssues(List<Order> orders) async {
+    try {
+      final List<OrderNote> notes = await _noteService.listAll();
+      return NoteService.openIssuesFor(orders, notes).length;
+    } on Exception catch (error) {
+      debugPrint('Could not read the notes: $error');
+      return 0;
     }
   }
 
@@ -69,6 +88,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const AdminFactoriesScreen()),
     );
+  }
+
+  Future<void> _openIssues() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => AdminIssuesScreen(
+          service: _service,
+          noteService: _noteService,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _load();
   }
 
   void _openCatalog() {
@@ -196,6 +228,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             title: 'Orders',
             subtitle: 'View, search and update orders',
             onTap: _openOrders,
+          ),
+          _NavTile(
+            icon: Icons.report_problem_outlined,
+            title: 'Issues and delays',
+            subtitle: _openIssueCount == 0
+                ? 'No open issues'
+                : '$_openIssueCount open issue(s) need attention',
+            onTap: _openIssues,
           ),
           _NavTile(
             icon: Icons.sell_outlined,

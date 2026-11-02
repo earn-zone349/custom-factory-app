@@ -9,6 +9,8 @@ import '../orders/models/order.dart';
 import '../orders/widgets/order_status_chip.dart';
 import '../orders/widgets/order_status_timeline.dart';
 import '../orders/widgets/saved_design_thumbnail.dart';
+import '../notes/models/order_note.dart';
+import '../notes/widgets/order_notes_card.dart';
 import '../production/widgets/production_files_card.dart';
 
 /// What a factory needs to produce one order. Customer details and prices
@@ -183,6 +185,12 @@ class _FactoryOrderDetailScreenState extends State<FactoryOrderDetailScreen> {
                   const SizedBox(height: AppSpacing.md),
                   ProductionFilesCard(order: order),
                 ],
+                const SizedBox(height: AppSpacing.md),
+                OrderNotesCard(
+                  order: order,
+                  viewer: NoteAuthor.manufacturer,
+                  factoryId: widget.factoryId,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   'Customer details and prices are handled by our team.',
