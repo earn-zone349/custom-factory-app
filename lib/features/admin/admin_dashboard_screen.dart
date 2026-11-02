@@ -8,6 +8,7 @@ import '../orders/models/order.dart';
 import 'admin_catalog_screen.dart';
 import 'admin_factories_screen.dart';
 import 'admin_orders_screen.dart';
+import 'admin_reports_screen.dart';
 import 'models/order_stats.dart';
 
 /// Admin home: order numbers at a glance and links to management tools.
@@ -54,6 +55,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
     if (!mounted) return;
     await _load();
+  }
+
+  void _openReports() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AdminReportsScreen(service: _service),
+      ),
+    );
   }
 
   void _openFactories() {
@@ -200,10 +209,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             subtitle: 'Manage factories and assign orders',
             onTap: _openFactories,
           ),
-          const _NavTile(
+          _NavTile(
             icon: Icons.bar_chart_rounded,
             title: 'Reports',
-            subtitle: 'Coming soon',
+            subtitle: 'Sales, products, factories and CSV export',
+            onTap: _openReports,
           ),
         ],
       ),
