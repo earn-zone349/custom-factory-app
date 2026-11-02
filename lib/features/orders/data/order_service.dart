@@ -146,6 +146,45 @@ class OrderService {
     return updated;
   }
 
+  /// The only status changes a factory may make itself: accept an order and
+  /// start production, then mark production as finished.
+  static const Map<OrderStatus, OrderStatus> _factoryMoves =
+      <OrderStatus, OrderStatus>{
+    OrderStatus.confirmed: OrderStatus.inProduction,
+    OrderStatus.inProduction: OrderStatus.qualityCheck,
+  };
+
+  /// The next status a factory can set for [order], or null if the factory
+  /// has nothing to do with it right now.
+  static OrderStatus? factoryNextStatus(Order order) {
+    return _factoryMoves[order.status];
+  }
+
+  /// True if [factoryId] should see [order]: it is assigned to that factory
+  /// and the admin has already confirmed it.
+  static bool isVisibleToFactory(Order order, String factoryId) {
+    return order.manufacturerId == factoryId &&
+        order.status != OrderStatus.placed;
+  }
+
+  /// Changes the status of an order on behalf of a factory.
+  /// Throws StateError if the order is missing, belongs to another factory,
+  /// or the change is not one a factory may make.
+  Future<Order> changeStatusAsFactory(
+    String id,
+    String factoryId,
+    OrderStatus next,
+  ) async {
+    final Order? order = await findOrder(id);
+    if (order == null || !isVisibleToFactory(order, factoryId)) {
+      throw StateError('This order is not assigned to your factory');
+    }
+    if (factoryNextStatus(order) != next) {
+      throw StateError('This change is not allowed for a factory');
+    }
+    return changeStatus(id, next);
+  }
+
   static String _generateId(DateTime now) {
     final String code = now.millisecondsSinceEpoch.toRadixString(36);
     return 'CF-${code.toUpperCase()}';

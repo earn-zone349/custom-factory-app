@@ -5,11 +5,19 @@ import '../../core/constants/app_config.dart';
 import '../../core/constants/app_spacing.dart';
 import '../admin/admin_access.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../factory_portal/factory_access.dart';
+import '../factory_portal/factory_portal_screen.dart';
 
 /// Profile tab. Account details arrive with the real login; for now it is
 /// the entry point to the admin panel.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  void _openFactoryPanel(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const FactoryPortalScreen()),
+    );
+  }
 
   void _openAdminPanel(BuildContext context) {
     Navigator.of(context).push(
@@ -76,6 +84,21 @@ class ProfileScreen extends StatelessWidget {
                 subtitle: const Text('Manage orders'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _openAdminPanel(context),
+              ),
+            ),
+          ],
+          if (FactoryAccess.isEnabled) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.factory_outlined,
+                  color: AppColors.primary,
+                ),
+                title: const Text('Factory panel'),
+                subtitle: const Text('View and update factory orders'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _openFactoryPanel(context),
               ),
             ),
           ],
