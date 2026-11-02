@@ -16,6 +16,7 @@ import '../orders/models/order_workflow.dart';
 import '../orders/widgets/order_status_chip.dart';
 import '../orders/widgets/order_status_timeline.dart';
 import '../orders/widgets/saved_design_thumbnail.dart';
+import '../production/widgets/production_files_card.dart';
 import 'widgets/factory_picker_sheet.dart';
 
 /// One order as the admin sees it: customer, items and status controls.
@@ -327,6 +328,10 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
+                if (order.status != OrderStatus.cancelled) ...<Widget>[
+                  ProductionFilesCard(order: order),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 _SectionCard(
                   title: 'Items',
                   child: Column(
