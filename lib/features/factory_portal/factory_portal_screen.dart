@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -64,9 +63,9 @@ class _FactoryPortalScreenState extends State<FactoryPortalScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_hasLoaded) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Factory panel')),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Factory panel')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
