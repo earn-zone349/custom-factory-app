@@ -9,6 +9,7 @@ import '../orders/models/order.dart';
 import '../orders/models/order_display.dart';
 import '../orders/widgets/order_status_chip.dart';
 import 'factory_order_detail_screen.dart';
+import 'factory_reports_screen.dart';
 import 'models/factory_order_filter.dart';
 
 /// The orders given to one factory, with filters.
@@ -80,6 +81,17 @@ class _FactoryOrdersScreenState extends State<FactoryOrdersScreen> {
     await _load();
   }
 
+  void _openReports() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FactoryReportsScreen(
+          factory: widget.factory,
+          service: widget.service,
+        ),
+      ),
+    );
+  }
+
   int _countFor(FactoryOrderFilter filter) {
     return _orders.where(filter.matches).length;
   }
@@ -90,6 +102,11 @@ class _FactoryOrdersScreenState extends State<FactoryOrdersScreen> {
       appBar: AppBar(
         title: Text(widget.factory.name),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'Reports',
+            onPressed: _openReports,
+            icon: const Icon(Icons.bar_chart_rounded),
+          ),
           IconButton(
             tooltip: 'Switch factory',
             onPressed: widget.onSwitchFactory,
